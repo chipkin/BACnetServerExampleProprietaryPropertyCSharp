@@ -1,4 +1,18 @@
-﻿using BACnetStackDLLServerCSharpExample;
+﻿/*
+ * Windows BACnet Server Example Proprietary Property Sharp
+ * ----------------------------------------------------------------------------
+ * BACnetServerExampleDatabase.cs
+ * 
+ * A BACnet server example that shows how to add proprietary property to an object 
+ *
+ * More information https://github.com/chipkin/BACnetServerExampleProprietaryPropertyCSharp
+ * 
+ * Created by: Steven Smethurst 
+ * Created on: June 24, 2019 
+ * Last updated: June 24, 2019 
+*/
+
+using BACnetStackDLLServerCSharpExample;
 using System;
 using System.Collections.Generic;
 using System.Text;

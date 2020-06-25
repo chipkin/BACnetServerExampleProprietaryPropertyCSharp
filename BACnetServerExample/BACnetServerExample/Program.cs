@@ -1,6 +1,8 @@
-﻿/**
+﻿/*
  * Windows BACnet Server Example Proprietary Property Sharp
  * ----------------------------------------------------------------------------
+ * Program.cs
+ * 
  * A BACnet server example that shows how to add proprietary property to an object 
  *
  * More information https://github.com/chipkin/BACnetServerExampleProprietaryPropertyCSharp
@@ -8,7 +10,7 @@
  * Created by: Steven Smethurst 
  * Created on: June 24, 2019 
  * Last updated: June 24, 2019 
- */
+*/
 
 
 using BACnetStackDLLServerCSharpExample;
@@ -22,19 +24,21 @@ namespace BACnetServerExample
 {
     class Program
     {
+        // Main function
         static void Main(string[] args)
         {
             BACnetServer bacnetServer = new BACnetServer();
             bacnetServer.Run();
         }
 
+        // BACnet Server Object
         unsafe class BACnetServer
         {
             // UDP 
             UdpClient udpServer;
             IPEndPoint RemoteIpEndPoint;
 
-            // Settings 
+            // Set up the BACnet port 
             const UInt16 SETTING_BACNET_PORT = 47808;
 
             // A Database to hold the current state of the 
@@ -43,15 +47,19 @@ namespace BACnetServerExample
             // Version 
             const string APPLICATION_VERSION = "0.0.1";
 
+            // Server setup and main loop
             public void Run()
             {
-                Console.WriteLine("Starting Windows-BACnetServerExampleProprietaryPropertyCSharp version{0}.{1}", APPLICATION_VERSION, CIBuildVersion.CIBUILDNUMBER);
+                Console.WriteLine("Starting Windows-BACnetServerExampleProprietaryPropertyCSharp version {0}.{1}", APPLICATION_VERSION, CIBuildVersion.CIBUILDNUMBER);
                 Console.WriteLine("https://github.com/chipkin/BACnetServerExampleProprietaryPropertyCSharp");
                 Console.WriteLine("FYI: BACnet Stack version: {0}.{1}.{2}.{3}",
                     CASBACnetStackAdapter.GetAPIMajorVersion(),
                     CASBACnetStackAdapter.GetAPIMinorVersion(),
                     CASBACnetStackAdapter.GetAPIPatchVersion(),
                     CASBACnetStackAdapter.GetAPIBuildVersion());
+
+                // 1. Setup the callbacks
+                // ---------------------------------------------------------------------------
 
                 // Send/Recv callbacks. 
                 CASBACnetStackAdapter.RegisterCallbackSendMessage(SendMessage);
@@ -64,10 +72,13 @@ namespace BACnetServerExample
                 // Set Datatype Callbacks 
                 CASBACnetStackAdapter.RegisterCallbackSetPropertyCharacterString(CallbackSetPropertyCharacterString);
 
+                // 2. Setup the BACnet device
+                // ---------------------------------------------------------------------------
 
+                // Initialize database
                 this.database.Setup();
 
-                // Add the device. 
+                // Add the device
                 CASBACnetStackAdapter.AddDevice(this.database.Device.instance);
                 CASBACnetStackAdapter.SetProprietaryProperty(this.database.Device.instance, CASBACnetStackAdapter.OBJECT_TYPE_DEVICE, this.database.Device.instance, 512 + 1, false, false, CASBACnetStackAdapter.DATA_TYPE_CHARACTER_STRING, false, false, false);
                 CASBACnetStackAdapter.SetProprietaryProperty(this.database.Device.instance, CASBACnetStackAdapter.OBJECT_TYPE_DEVICE, this.database.Device.instance, 512 + 2, true, true, CASBACnetStackAdapter.DATA_TYPE_CHARACTER_STRING, false, false, false);
@@ -77,22 +88,26 @@ namespace BACnetServerExample
                 CASBACnetStackAdapter.SetServiceEnabled(database.Device.instance, CASBACnetStackAdapter.SERVICE_WRITE_PROPERTY, true);
                 CASBACnetStackAdapter.SetServiceEnabled(database.Device.instance, CASBACnetStackAdapter.SERVICE_WRITE_PROPERTY_MULTIPLE, true);
 
-                // All done with the BACnet setup. 
+                // All done with the BACnet setup
                 Console.WriteLine("FYI: CAS BACnet Stack Setup, successfuly");
 
-                // Open the BACnet port to recive messages. 
+                // 3. Open the BACnet port to receive messages
+                // ---------------------------------------------------------------------------
                 this.udpServer = new UdpClient(SETTING_BACNET_PORT);
                 this.RemoteIpEndPoint = new IPEndPoint(IPAddress.Any, 0);
 
-                // Main loop.
+                // 4. Main loop
+                // ---------------------------------------------------------------------------
                 Console.WriteLine("FYI: Starting main loop");
                 for (; ; )
                 {
-                    CASBACnetStackAdapter.Loop();
-                    database.Loop(); // Just for this example 
+                    CASBACnetStackAdapter.Loop(); // CAS BACnet stack loop
+
+                    database.Loop(); // Update database values
                 }
             }
 
+            // Not used
             private void DoUserInput()
             {
                 if (Console.KeyAvailable)
@@ -113,12 +128,14 @@ namespace BACnetServerExample
                 }
             }
 
-
+            // Callback used by the BACnet Stack to get the current time
             public ulong CallbackGetSystemTime()
             {
                 // https://stackoverflow.com/questions/9453101/how-do-i-get-epoch-time-in-c
                 return (ulong)(DateTime.UtcNow - new DateTime(1970, 1, 1)).TotalSeconds;
             }
+
+            // Callback used by the BACnet Stack to send a BACnet message
             public UInt16 SendMessage(System.Byte* message, UInt16 messageLength, System.Byte* connectionString, System.Byte connectionStringLength, System.Byte networkType, Boolean broadcast)
             {
                 if (connectionStringLength < 6 || messageLength <= 0)
@@ -148,6 +165,8 @@ namespace BACnetServerExample
 
                 return 0;
             }
+
+            // Callback used by the BACnet Stack to check if there is a message to process
             public UInt16 RecvMessage(System.Byte* message, UInt16 maxMessageLength, System.Byte* receivedConnectionString, System.Byte maxConnectionStringLength, System.Byte* receivedConnectionStringLength, System.Byte* networkType)
             {
                 try
@@ -181,9 +200,10 @@ namespace BACnetServerExample
                 return 0;
             }
 
-            private UInt32 UpdateStringAndReturnSize(System.Char* value, UInt32 maxElementCount, string stringAsVallue)
+            // Update a string and return its size
+            private UInt32 UpdateStringAndReturnSize(System.Char* value, UInt32 maxElementCount, string stringAsValue)
             {
-                byte[] nameAsBuffer = ASCIIEncoding.ASCII.GetBytes(stringAsVallue);
+                byte[] nameAsBuffer = ASCIIEncoding.ASCII.GetBytes(stringAsValue);
                 UInt32 valueElementCount = maxElementCount;
                 if (nameAsBuffer.Length < valueElementCount)
                 {
@@ -192,6 +212,8 @@ namespace BACnetServerExample
                 Marshal.Copy(nameAsBuffer, 0, (IntPtr)value, Convert.ToInt32(valueElementCount));
                 return valueElementCount;
             }
+
+            // Read string from char pointer
             private string GetStringFromCharPointer(System.Char* value, UInt32 maxElementCount, Byte encodingType)
             {
                 byte[] nameAsBuffer = new Byte[maxElementCount];
@@ -199,6 +221,7 @@ namespace BACnetServerExample
                 return ASCIIEncoding.ASCII.GetString(nameAsBuffer);
             }
 
+            // Callback used by the BACnet Stack to set Charstring property values to the user
             public bool CallbackGetPropertyCharString(UInt32 deviceInstance, UInt16 objectType, UInt32 objectInstance, UInt32 propertyIdentifier, System.Char* value, UInt32* valueElementCount, UInt32 maxElementCount, System.Byte encodingType, bool useArrayIndex, UInt32 propertyArrayIndex)
             {
                 Console.WriteLine("FYI: Request for CallbackGetPropertyCharString. objectType={0}, objectInstance={1}, propertyIdentifier={2}, propertyArrayIndex={3}", objectType, objectInstance, propertyIdentifier, propertyArrayIndex);
@@ -251,6 +274,7 @@ namespace BACnetServerExample
                 return false; // Could not handle this request. 
             }
 
+            // Callback used by the BACnet Stack to set Charstring property values to the user
             bool CallbackSetPropertyCharacterString(UInt32 deviceInstance, UInt16 objectType, UInt32 objectInstance, UInt32 propertyIdentifier, char* value, UInt32 length, Byte encodingType, [In, MarshalAs(UnmanagedType.I1)] bool useArrayIndex, UInt32 propertyArrayIndex, System.Byte priority, UInt32* errorCode)
             {
                 Console.WriteLine("FYI: Request for CallbackSetPropertyCharacterString. objectType={0}, objectInstance={1}, propertyIdentifier={2}, propertyArrayIndex={3}", objectType, objectInstance, propertyIdentifier, propertyArrayIndex);
