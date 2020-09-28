@@ -84,6 +84,7 @@ namespace BACnetServerExample
                 CASBACnetStackAdapter.SetProprietaryProperty(this.database.Device.instance, CASBACnetStackAdapter.OBJECT_TYPE_DEVICE, this.database.Device.instance, 512 + 2, true, true, CASBACnetStackAdapter.DATA_TYPE_CHARACTER_STRING, false, false, false);
 
                 // Enable optional services 
+                CASBACnetStackAdapter.SetServiceEnabled(database.Device.instance, CASBACnetStackAdapter.SERVICE_I_AM, true);
                 CASBACnetStackAdapter.SetServiceEnabled(database.Device.instance, CASBACnetStackAdapter.SERVICE_READ_PROPERTY_MULTIPLE, true);
                 CASBACnetStackAdapter.SetServiceEnabled(database.Device.instance, CASBACnetStackAdapter.SERVICE_WRITE_PROPERTY, true);
                 CASBACnetStackAdapter.SetServiceEnabled(database.Device.instance, CASBACnetStackAdapter.SERVICE_WRITE_PROPERTY_MULTIPLE, true);
